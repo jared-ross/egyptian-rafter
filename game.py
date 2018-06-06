@@ -4,15 +4,15 @@ Contains the core game code.
 """
 
 import copy
-from collections import namedtuple
 from functools import reduce
 from typing import Any, NamedTuple
 
-from cards import Card, Cards, is_royal, is_last_n_royal
+from cards import Cards, is_royal
 
 
 # Game Settings
 PLAYERS = 2
+
 
 # Helpers:
 def inc_player(turn):
@@ -25,6 +25,7 @@ def dec_player(turn):
 def compose(f, g):
     return lambda x: f(g(x))
 
+
 # Game State Representation
 class Game(NamedTuple):
     player_cards: Any
@@ -32,20 +33,21 @@ class Game(NamedTuple):
     next_player: Any
     winner: Any = None
 
-def new_game(deck = None):
+def new_game(deck=None):
     """Create a Game State representation of a new game."""
     if not deck:
         deck = Cards.new_deck().shuffle()
 
     players = []
 
-    # NOTE This only works if there is no remainder, ie number of players is a divisor of . For now.
+    # NOTE This only works if there is no remainder, ie number of
+    #      players is a divisor of the number of cards. For now.
     cards_per_player = int(len(deck) / PLAYERS)
     for i in range(0, PLAYERS):
         players.append(deck.top_n(cards_per_player))
         deck = deck.top_n_rest(cards_per_player)
 
-    stack = Cards() 
+    stack = Cards()
     next_player = 0
 
     return Game(players, stack, next_player)
@@ -53,12 +55,13 @@ def new_game(deck = None):
 # Royal Penaltys
 def last_royal(game):
     """Find the last Royal put down in the stack
-    
+
     Returns: (position of Royal, the Card)
     """
     if len(game.stack) > 0:
-        try: 
-            return next(filter(compose(is_royal, lambda c: c[1]), enumerate(reversed(game.stack))))
+        try:
+            return next(filter(compose(is_royal, lambda c: c[1]),
+                               enumerate(reversed(game.stack))))
         except StopIteration:
             pass
     return None
@@ -114,19 +117,21 @@ def skip_out_players(game):
     return game
 
 def is_winner(game):
-    return reduce(lambda acc, cards: acc or len(cards) == 0, game.player_cards, False)
+    return reduce(lambda acc, cards: acc or len(cards) == 0,
+                  game.player_cards, False)
 
 def apply_wins(game):
     """Have the winner be declared, if any. Nonmutating."""
     if is_winner(game):
         (player_cards, stack, next_player, winner) = game
-        winner = next(filter(lambda x: len(x[1]) != 0, enumerate(game.player_cards)))[0]
+        winner = next(filter(lambda x: len(x[1]) != 0,
+                             enumerate(game.player_cards)))[0]
         return Game(player_cards, stack, next_player, winner)
     return game
 
 def step_game(game):
     """Have the game progress a step. Nonmutating."""
-    if game.winner != None:
+    if game.winner is not None:
         return game
 
     game = skip_out_players(game)
@@ -147,7 +152,7 @@ def step_game(game):
     return game
 
 def run_tests():
-    for i in range(0,100):
+    for i in range(0, 100):
         g = new_game()
         # Checking that they don't mutate game
         orig_g = copy.deepcopy(g)
@@ -174,13 +179,13 @@ def run_tests():
 
         step_game(g)
         assert orig_g == g
- 
+
         flip_card(g)
         assert orig_g == g
 
         stack_won(g)
         assert orig_g == g
-        
+
         apply_wins(g)
         assert orig_g == g
     print("Testing game.py: OK")
